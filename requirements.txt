@@ -1,0 +1,7 @@
+boto3==1.40.36
+pandas==2.3.3
+psycopg2-binary==2.9.11
+confluent-kafka==2.11.1tweepy==4.16.0
+tweepy==4.16.0
+dotenv==0.9.9
+SQLAlchemy==2.0.43
