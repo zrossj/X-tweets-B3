@@ -1,0 +1,3 @@
+boto3==1.40.36
+confluent-kafka==2.11.1
+dotenv==0.9.9

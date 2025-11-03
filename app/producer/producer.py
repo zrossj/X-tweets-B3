@@ -12,7 +12,6 @@ load_dotenv()
 ## load variables .env
 token = os.getenv("TWITTER_BEARER_TOKEN")
 
-
 # config KAFKA
 conf = {
     'bootstrap.servers': os.getenv('bootstrap_servers'),
@@ -22,7 +21,6 @@ conf = {
 
 # set tweepy's client
 client = tweepy.Client(bearer_token=token)
-
 
 # define query for filtering data from tweets 
 stocks_list = ["BBAS3", "PETR3" , "PETR4",  "CMIN3",  "VAMO3",  "BBSE3", "LEVE3", "RECV3"]
@@ -54,7 +52,7 @@ message = {now: request}
 producer = Producer(conf)
 
 producer.produce(
-    topic = 'stmana',
+    topic = os.getenv('kafka_topic'),
     value = json.dumps(message).encode('utf-8')
 )
 

@@ -13,7 +13,13 @@ bucket_name = os.getenv('bucket_name')
 
 # SETUP AWS CONNECTION
 s3 = aws_s3()._connect_s3_()
-prefix = 'raw_data/'
+
+prefix = os.getenv('bucket_prefix')
+psql_user = os.getenv('postgres_user')
+db_name = os.getenv('postgres_db')
+db_port = os.getenv('postgres_port')
+password = os.getenv('postgres_password')
+db_host = os.getenv('postgres_host')
 
 response = s3.list_objects_v2(
     Bucket = bucket_name, Prefix = prefix)      # holds all the 'files' stored in raw_data/ on AWS;
@@ -65,12 +71,9 @@ df.columns = ['tweet_id', 'datetime', 'body']
 
 
 # INSERTING ON POSTGRESQL
-psql_user = os.getenv('postgres_user')
-db_name = os.getenv('postgres_db')
-db_port = os.getenv('postgres_port')
-password = os.getenv('postgres_password')
 
-uri = f"postgresql+psycopg2://{psql_user}:{password}@localhost:{db_port}/{db_name}"
+
+uri = f"postgresql+psycopg2://{psql_user}:{password}@{db_host}:{db_port}/{db_name}"
 engine = create_engine(uri)
 
 

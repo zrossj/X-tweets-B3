@@ -2,21 +2,32 @@ services:
   broker:
     image: apache/kafka:latest
     container_name: stan_broker
+    
     ports:
         - 9092:9092
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions.sh", "--bootstrap-server=localhost:9092"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://stan_broker:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@stan_broker:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 3
+
+      PATH: "/opt/kafka/bin:${PATH}"
 
 
   rds:
@@ -30,6 +41,39 @@ services:
       - 5444:5432
     volumes:
       - postgresql_tweets:/var/lib/postgresql/data
+
+  py_consumer:
+    build:
+      context: app/consumer
+      dockerfile: Dockerfile
+    container_name: stan_consumer
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  py_producer:
+    build:
+      context: app/producer
+      dockerfile: Dockerfile
+    container_name: stan_producer
+    depends_on:
+      broker:
+        condition: service_healthy
+      py_consumer: 
+        condition: service_started
+  
+  py_injection:
+    build:
+      context: app/db_injection
+      dockerfile: Dockerfile
+    container_name: stan_injec
+    depends_on:
+      broker:
+        condition: service_healthy
+      rds:
+        condition: service_started
+      py_consumer:
+        condition: service_started
 
   
 volumes:
