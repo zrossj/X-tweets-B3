@@ -7,13 +7,16 @@ import os
 import re
 import json
 from s3_bucket import aws_s3
+import logging
+
+
+logging.basicConfig(
+    level = logging.INFO,
+    format = "%(asctime)s [%(levelname)s] (%(filename)s) - %(message)s"
+)
 
 load_dotenv()
 bucket_name = os.getenv('bucket_name')
-
-# SETUP AWS CONNECTION
-s3 = aws_s3()._connect_s3_()
-
 prefix = os.getenv('bucket_prefix')
 psql_user = os.getenv('postgres_user')
 db_name = os.getenv('postgres_db')
@@ -21,10 +24,17 @@ db_port = os.getenv('postgres_port')
 password = os.getenv('postgres_password')
 db_host = os.getenv('postgres_host')
 
-response = s3.list_objects_v2(
-    Bucket = bucket_name, Prefix = prefix)      # holds all the 'files' stored in raw_data/ on AWS;
 
-#%%
+# SETUP AWS CONNECTION
+s3 = aws_s3().s3
+
+try:
+    response = s3.list_objects_v2(
+        Bucket = bucket_name, Prefix = 'raw_data/')      # holds all the 'files' stored in raw_data/ on AWS;
+except Exception as e:
+    logging.exception(f"AWS S3 bucket listing error: {e}")
+
+
 objects_data = []
 objects_key = []
 
@@ -72,14 +82,18 @@ df.columns = ['tweet_id', 'datetime', 'body']
 
 # INSERTING ON POSTGRESQL
 
-
+#%%
 uri = f"postgresql+psycopg2://{psql_user}:{password}@{db_host}:{db_port}/{db_name}"
+
 engine = create_engine(uri)
 
+try:
+    with engine.connect() as conn:
 
-with engine.connect() as conn:
+        df.to_sql(
+            name = 'tweets_ibovstocks', con = conn, 
+            if_exists= 'replace', index = False)
 
-    df.to_sql(
-        name = 'tweets_ibovstocks', con = conn, 
-        if_exists= 'replace', index = False)
+except Exception as e:
+    logging.info(f"Error on connecting or ingesting the data: {e}")
 

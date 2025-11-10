@@ -15,28 +15,26 @@ class aws_s3:
         self.aws_access_key_id = os.getenv('aws_access_key_id')
         self.aws_secret_access_key = os.getenv('aws_secret_access_key')
         self.aws_region = os.getenv('aws_region')
-
-        return None
-
-    def _connect_s3_(self):
-
-        s3 = boto3.client(
+        self.aws_bucket_prefix = os.getenv('bucket_prefix')
+        self.aws_bucket_name = os.getenv('bucket_name')
+        
+        self.s3 = boto3.client(
             's3',
             aws_access_key_id = self.aws_access_key_id, 
             aws_secret_access_key = self.aws_secret_access_key,
             region_name = self.aws_region
         )
-        return s3
+
+        return None
 
 
     def put_in_s3(self, file_key, file_content):
         
-        file_key_path = f'raw_data/{file_key}.json'
+        file_key_path = f'{self.aws_bucket_prefix}{file_key}.json'
         json_data = json.dumps(file_content)
-        s3 = self._connect_s3_()
-
-        response = s3.put_object(
-            Bucket = os.getenv('bucket_name'),
+       
+        response = self.s3.put_object(
+            Bucket = self.aws_bucket_name,
             Key = file_key_path,
             Body = json_data,
             ContentType = 'application/json'
